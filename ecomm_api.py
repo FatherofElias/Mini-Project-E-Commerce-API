@@ -38,6 +38,8 @@ customers_schema = CustomerSchema(many=True)
 with app.app_context():
     db.create_all()
 
+#Add Customer
+
 @app.route('/customers', methods=['POST'])
 def add_customer():
     try:
@@ -52,12 +54,14 @@ def add_customer():
     db.session.commit()
     return jsonify({"message": "New customer added successfully"}), 201
 
+# View Customer
 
 @app.route('/customers/<int:id>', methods=['GET'])
 def get_customer(id):
     customer = Customer.query.get_or_404(id)
     return customer_schema.jsonify(customer)
 
+#Update Customer Info
 
 @app.route('/customers/<int:id>', methods=['PUT'])
 def update_customer(id):
@@ -73,7 +77,7 @@ def update_customer(id):
     db.session.commit()
     return jsonify({"message": "Customer details updated successfully"}), 200
 
-
+#Delete Customer 
 
 @app.route('/customers/<int:id>', methods=['DELETE'])
 def delete_customer(id):
@@ -101,9 +105,42 @@ def add_customer_account():
     except ValidationError as err:
         return jsonify(err.messages), 400
     
+#View CustomerAccount
+
+@app.route('/customer_accounts/<int:id>', methods=['GET'])
+def get_customer_account(id):
+    account = CustomerAccount.query.get_or_404(id)
+    return jsonify({
+        'id': account.id,
+        'username': account.username,
+        'password': account.password,
+        'customer': customer_schema.dump(account.customer)
+    })
 
 
+#Update CustomerAccount
 
+@app.route('/customer_accounts/<int:id>', methods=['PUT'])
+def update_customer_account(id):
+    account = CustomerAccount.query.get_or_404(id)
+    try:
+        account_data = request.json
+        account.username = account_data['username']
+        account.password = account_data['password']
+        db.session.commit()
+        return jsonify({"message": "Customer account updated successfully"}), 200
+    except ValidationError as err:
+        return jsonify(err.messages), 400
+
+
+#Delete CustomerAccount
+
+@app.route('/customer_accounts/<int:id>', methods=['DELETE'])
+def delete_customer_account(id):
+    account = CustomerAccount.query.get_or_404(id)
+    db.session.delete(account)
+    db.session.commit()
+    return jsonify({"message": "Customer account removed successfully"}), 200
 
 
 if __name__ == '__main__':
