@@ -18,6 +18,13 @@ class Customer(db.Model):
     orders = db.relationship('Order', backref='customer')
 
 
+class Order(db.Model):
+    __tablename__ = 'Orders'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('Customers.id'))
+
+
 class CustomerAccount(db.Model):
     __tablename__ = 'Customer_Accounts'
     id = db.Column(db.Integer, primary_key=True)
@@ -27,13 +34,42 @@ class CustomerAccount(db.Model):
     customer = db.relationship('Customer', backref='customer_account', uselist=False)
 
 
+order_product = db.Table('Order_Product',
+    db.Column('order_id', db.Integer, db.ForeignKey('Orders.id'), primary_key=True),
+    db.Column('product_id', db.Integer, db.ForeignKey('Products.id'), primary_key=True)
+)
+
+class Product(db.Model):
+    __tablename__ = 'Products'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    orders = db.relationship('Order', secondary=order_product, backref=db.backref('products'))
+
+
 class CustomerSchema(ma.Schema):
     class Meta:
         fields = ('id', 'name', 'email', 'phone', 'orders')
     orders = fields.Nested('OrderSchema', many=True, exclude=('customer',))
 
+class OrderSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'date', 'customer_id', 'products')
+    products = fields.Nested('ProductSchema', many=True, exclude=('orders',))
+
+class ProductSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'name', 'price')
+
 customer_schema = CustomerSchema()
 customers_schema = CustomerSchema(many=True)
+order_schema = OrderSchema()
+orders_schema = OrderSchema(many=True)
+product_schema = ProductSchema()
+products_schema = ProductSchema(many=True)
+
+
+
 
 with app.app_context():
     db.create_all()
