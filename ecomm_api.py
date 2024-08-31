@@ -205,6 +205,22 @@ def get_product(id):
     return product_schema.jsonify(product)
 
 
+#Update Product
+
+#@app.route('/products/<int:id>', methods=['PUT'])
+def update_product(id):
+    product = Product.query.get_or_404(id)
+    try:
+        product_data = product_schema.load(request.json)
+    except ValidationError as err:
+        return jsonify(err.messages), 400
+    
+    product.name = product_data['name']
+    product.price = product_data['price']
+    db.session.commit()
+    return jsonify({"message": "Product details updated successfully"}), 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
