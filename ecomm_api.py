@@ -44,8 +44,8 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     price = db.Column(db.Float, nullable=False)
+    stock = db.Column(db.Integer, nullable=False, default=0)
     orders = db.relationship('Order', secondary=order_product, backref=db.backref('products'))
-
 
 class CustomerSchema(ma.Schema):
     class Meta:
@@ -59,7 +59,9 @@ class OrderSchema(ma.Schema):
 
 class ProductSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'name', 'price')
+        fields = ('id', 'name', 'price', 'stock')
+
+
 
 customer_schema = CustomerSchema()
 customers_schema = CustomerSchema(many=True)
@@ -177,6 +179,31 @@ def delete_customer_account(id):
     db.session.delete(account)
     db.session.commit()
     return jsonify({"message": "Customer account removed successfully"}), 200
+
+
+#Add Product Endpoint
+
+@app.route('/products', methods=['POST'])
+def add_product():
+    try:
+        product_data = product_schema.load(request.json)
+    except ValidationError as err:
+        return jsonify(err.messages), 400
+    
+    new_product = Product(name=product_data['name'],
+                          price=product_data['price'])
+    db.session.add(new_product)
+    db.session.commit()
+    return jsonify({"message": "New product added successfully"}), 201
+
+
+#View Product 
+
+@app.route('/products/<int:id>', methods=['GET'])
+def get_product(id):
+    product = Product.query.get_or_404(id)
+    return product_schema.jsonify(product)
+
 
 
 if __name__ == '__main__':
