@@ -220,6 +220,25 @@ def update_product(id):
     db.session.commit()
     return jsonify({"message": "Product details updated successfully"}), 200
 
+#Delete Product
+
+@app.route('/products/<int:id>', methods=['DELETE'])
+def delete_product(id):
+    product = Product.query.get_or_404(id)
+    db.session.delete(product)
+    db.session.commit()
+    return jsonify({"message": "Product removed successfully"}), 200
+
+
+#List all products
+
+@app.route('/products', methods=['GET'])
+def get_products():
+    products = Product.query.all()
+    return products_schema.jsonify(products)
+
+
+#Update Stock
 
 
 if __name__ == '__main__':
