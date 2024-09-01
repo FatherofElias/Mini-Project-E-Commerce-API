@@ -21,6 +21,8 @@ class Order(db.Model):
     __tablename__ = 'Orders'
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(50), nullable=False, default='pending')  # Add status field
+    expected_delivery_date = db.Column(db.Date)  # Add expected_delivery_date field
     customer_id = db.Column(db.Integer, db.ForeignKey('Customers.id'))
 
 
@@ -243,7 +245,76 @@ def restock_products():
 
 
 
+# Place Order
+@app.route('/orders', methods=['POST'])
+def place_order():
+    try:
+        order_data = request.json
+        customer_id = order_data['customer_id']
+        product_ids = order_data['product_ids']
+        
+        customer = Customer.query.get_or_404(customer_id)
+        new_order = Order(date=order_data['date'], customer=customer)
+        
+        for product_id in product_ids:
+            product = Product.query.get_or_404(product_id)
+            new_order.products.append(product)
+        
+        db.session.add(new_order)
+        db.session.commit()
+        return jsonify({"message": "Order placed successfully"}), 201
+    except ValidationError as err:
+        return jsonify(err.messages), 400
+    
 
+
+# Retrieve Order
+@app.route('/orders/<int:id>', methods=['GET'])
+def get_order(id):
+    order = Order.query.get_or_404(id)
+    return order_schema.jsonify(order)
+
+
+
+# Track Order
+@app.route('/orders/<int:id>/status', methods=['GET'])
+def track_order(id):
+    order = Order.query.get_or_404(id)
+    return jsonify({
+        'id': order.id,
+        'date': order.date,
+        'status': order.status,  
+        'expected_delivery_date': order.expected_delivery_date
+    })
+
+
+
+# Manage Order History
+@app.route('/customers/<int:customer_id>/orders', methods=['GET'])
+def get_order_history(customer_id):
+    customer = Customer.query.get_or_404(customer_id)
+    orders = Order.query.filter_by(customer_id=customer.id).all()
+    return orders_schema.jsonify(orders)
+
+
+# Cancel Order
+@app.route('/orders/<int:id>/cancel', methods=['PUT'])
+def cancel_order(id):
+    order = Order.query.get_or_404(id)
+    if order.status != 'shipped' and order.status != 'completed':  # Assuming you have a status field
+        order.status = 'canceled'
+        db.session.commit()
+        return jsonify({"message": "Order canceled successfully"}), 200
+    else:
+        return jsonify({"message": "Order cannot be canceled"}), 400
+    
+
+# Calculate Order Total Price
+@app.route('/orders/<int:id>/total', methods=['GET'])
+def calculate_order_total(id):
+    order = Order.query.get_or_404(id)
+    total_price = sum(product.price for product in order.products)
+    return jsonify({'total_price': total_price})
 
 
 if __name__ == '__main__':
