@@ -37,11 +37,9 @@ Body Content-Type application/JSON:
 }
 
 
-
 View Customer:
 Method: GET
 URL: http://localhost:5000/customers/1
-
 
 Update Customer:
 Method: PUT
@@ -54,11 +52,9 @@ Body Content-Type application/JSON:
     "phone": "0987654321"
 }
 
-
 Delete Customer:
 Method: DELETE
 URL: http://localhost:5000/customers/1
-
 
 Place Order:
 Method: POST
@@ -71,11 +67,9 @@ Body Content-Type application/JSON:
     "date": "2024-09-01"
 }
 
-
 Retrieve Order:
 Method: GET
 URL: http://localhost:5000/orders/1
-
 
 Track Order:
 Method: GET
