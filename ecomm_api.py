@@ -8,7 +8,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:Elias928@lo
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 
-
 class Customer(db.Model):
     __tablename__ = 'Customers'
     id = db.Column(db.Integer, primary_key=True)
@@ -50,18 +49,16 @@ class Product(db.Model):
 class CustomerSchema(ma.Schema):
     class Meta:
         fields = ('id', 'name', 'email', 'phone', 'orders')
-    orders = fields.Nested('OrderSchema', many=True, exclude=('customer',))
+    orders = fields.Nested('OrderSchema', many=True)
 
 class OrderSchema(ma.Schema):
     class Meta:
         fields = ('id', 'date', 'customer_id', 'products')
-    products = fields.Nested('ProductSchema', many=True, exclude=('orders',))
+    products = fields.Nested('ProductSchema', many=True)
 
 class ProductSchema(ma.Schema):
     class Meta:
         fields = ('id', 'name', 'price', 'stock')
-
-
 
 customer_schema = CustomerSchema()
 customers_schema = CustomerSchema(many=True)
@@ -70,14 +67,10 @@ orders_schema = OrderSchema(many=True)
 product_schema = ProductSchema()
 products_schema = ProductSchema(many=True)
 
-
-
-
 with app.app_context():
     db.create_all()
 
-#Add Customer
-
+# Add Customer
 @app.route('/customers', methods=['POST'])
 def add_customer():
     try:
@@ -93,14 +86,14 @@ def add_customer():
     return jsonify({"message": "New customer added successfully"}), 201
 
 # View Customer
-
 @app.route('/customers/<int:id>', methods=['GET'])
 def get_customer(id):
+    print(f"Fetching customer with ID: {id}")
     customer = Customer.query.get_or_404(id)
+    print(f"Customer found: {customer.name}")
     return customer_schema.jsonify(customer)
 
-#Update Customer Info
-
+# Update Customer Info
 @app.route('/customers/<int:id>', methods=['PUT'])
 def update_customer(id):
     customer = Customer.query.get_or_404(id)
@@ -115,8 +108,7 @@ def update_customer(id):
     db.session.commit()
     return jsonify({"message": "Customer details updated successfully"}), 200
 
-#Delete Customer 
-
+# Delete Customer 
 @app.route('/customers/<int:id>', methods=['DELETE'])
 def delete_customer(id):
     customer = Customer.query.get_or_404(id)
@@ -124,8 +116,7 @@ def delete_customer(id):
     db.session.commit()
     return jsonify({"message": "Customer removed successfully"}), 200
 
-#Create CustomerAccount
-
+# Create CustomerAccount
 @app.route('/customer_accounts', methods=['POST'])
 def add_customer_account():
     try:
@@ -143,8 +134,7 @@ def add_customer_account():
     except ValidationError as err:
         return jsonify(err.messages), 400
     
-#View CustomerAccount
-
+# View CustomerAccount
 @app.route('/customer_accounts/<int:id>', methods=['GET'])
 def get_customer_account(id):
     account = CustomerAccount.query.get_or_404(id)
@@ -155,9 +145,7 @@ def get_customer_account(id):
         'customer': customer_schema.dump(account.customer)
     })
 
-
-#Update CustomerAccount
-
+# Update CustomerAccount
 @app.route('/customer_accounts/<int:id>', methods=['PUT'])
 def update_customer_account(id):
     account = CustomerAccount.query.get_or_404(id)
@@ -170,9 +158,7 @@ def update_customer_account(id):
     except ValidationError as err:
         return jsonify(err.messages), 400
 
-
-#Delete CustomerAccount
-
+# Delete CustomerAccount
 @app.route('/customer_accounts/<int:id>', methods=['DELETE'])
 def delete_customer_account(id):
     account = CustomerAccount.query.get_or_404(id)
@@ -180,9 +166,7 @@ def delete_customer_account(id):
     db.session.commit()
     return jsonify({"message": "Customer account removed successfully"}), 200
 
-
-#Add Product Endpoint
-
+# Add Product Endpoint
 @app.route('/products', methods=['POST'])
 def add_product():
     try:
@@ -191,23 +175,20 @@ def add_product():
         return jsonify(err.messages), 400
     
     new_product = Product(name=product_data['name'],
-                          price=product_data['price'])
+                          price=product_data['price'],
+                          stock=product_data.get('stock', 0))
     db.session.add(new_product)
     db.session.commit()
     return jsonify({"message": "New product added successfully"}), 201
 
-
-#View Product 
-
+# View Product 
 @app.route('/products/<int:id>', methods=['GET'])
 def get_product(id):
     product = Product.query.get_or_404(id)
     return product_schema.jsonify(product)
 
-
-#Update Product
-
-#@app.route('/products/<int:id>', methods=['PUT'])
+# Update Product
+@app.route('/products/<int:id>', methods=['PUT'])
 def update_product(id):
     product = Product.query.get_or_404(id)
     try:
@@ -217,11 +198,11 @@ def update_product(id):
     
     product.name = product_data['name']
     product.price = product_data['price']
+    product.stock = product_data['stock']
     db.session.commit()
     return jsonify({"message": "Product details updated successfully"}), 200
 
-#Delete Product
-
+# Delete Product
 @app.route('/products/<int:id>', methods=['DELETE'])
 def delete_product(id):
     product = Product.query.get_or_404(id)
@@ -229,16 +210,40 @@ def delete_product(id):
     db.session.commit()
     return jsonify({"message": "Product removed successfully"}), 200
 
-
-#List all products
-
+# List all products
 @app.route('/products', methods=['GET'])
 def get_products():
     products = Product.query.all()
     return products_schema.jsonify(products)
 
+# Update Stock
+@app.route('/products/<int:id>/stock', methods=['PUT'])
+def update_stock(id):
+    product = Product.query.get_or_404(id)
+    try:
+        stock_data = request.json
+        product.stock = stock_data['stock']
+        db.session.commit()
+        return jsonify({"message": "Product stock updated successfully"}), 200
+    except ValidationError as err:
+        return jsonify(err.messages), 400
 
-#Update Stock
+# Restock Products
+@app.route('/products/restock', methods=['POST'])
+def restock_products():
+    threshold = request.json.get('threshold', 10)
+    restock_amount = request.json.get('restock_amount', 50)
+    
+    products = Product.query.filter(Product.stock < threshold).all()
+    for product in products:
+        product.stock += restock_amount
+    
+    db.session.commit()
+    return jsonify({"message": "Products restocked successfully"}), 200
+
+
+
+
 
 
 if __name__ == '__main__':
