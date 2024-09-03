@@ -21,8 +21,8 @@ class Order(db.Model):
     __tablename__ = 'Orders'
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(50), nullable=False, default='pending')  # Add status field
-    expected_delivery_date = db.Column(db.Date)  # Add expected_delivery_date field
+    status = db.Column(db.String(50), nullable=False, default='pending')  
+    expected_delivery_date = db.Column(db.Date)  
     customer_id = db.Column(db.Integer, db.ForeignKey('Customers.id'))
 
 
@@ -301,7 +301,7 @@ def get_order_history(customer_id):
 @app.route('/orders/<int:id>/cancel', methods=['PUT'])
 def cancel_order(id):
     order = Order.query.get_or_404(id)
-    if order.status != 'shipped' and order.status != 'completed':  # Assuming you have a status field
+    if order.status != 'shipped' and order.status != 'completed':  
         order.status = 'canceled'
         db.session.commit()
         return jsonify({"message": "Order canceled successfully"}), 200
